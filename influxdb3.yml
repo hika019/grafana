@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influxdb
+  namespace: grafana
+spec:
+  selector:
+    matchLabels:
+      app: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      securityContext:
+        fsGroup: 1000
+        supplementalGroups:
+          - 0
+      initContainers:
+      - name: fix-permissions
+        # image: busybox:1.35
+        image: python:3.11-slim
+        command: ['sh', '-c']
+        args:
+          - |
+            chown -R 1000:1000 /var/lib/influxdb3/data
+            chmod -R 755 /var/lib/influxdb3/data
+            python -m venv /plugins/.venv && /plugins/.venv/bin/pip install --upgrade pip
+        volumeMounts:
+        - mountPath: /var/lib/influxdb3/data
+          name: pv-influxdb
+        - name: plugins
+          mountPath: /plugins
+
+      containers:
+        - name: influxdb
+          image: influxdb:3.4.0-core
+          imagePullPolicy: IfNotPresent
+          args:
+            - "serve"
+            - "--node-id=node1"
+            - "--object-store=file"
+            - "--data-dir=/var/lib/influxdb3/data"
+            - "--http-bind=0.0.0.0:8181"
+            - "--admin-token-file=/etc/influxdb/admin-token.json"
+          ports:
+            - containerPort: 8181
+              name: influxdb
+              protocol: TCP
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - name: pv-influxdb
+              mountPath: /var/lib/influxdb3/data
+            - name: admin-token
+              mountPath: /etc/influxdb
+              readOnly: true
+            - name: plugins
+              mountPath: /plugins
+            
+      volumes:
+        - name: pv-influxdb
+          persistentVolumeClaim:
+            claimName: pvc-influxdb
+        - name: admin-token
+          secret:
+            secretName: influxdb-admin-token
+            defaultMode: 0600
+        - name: plugins
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb
+  namespace: grafana
+spec:
+  type: NodePort
+  selector:
+    app: influxdb
+  ports:
+    - name: http
+      port: 8181
+      targetPort: 8181
+      nodePort: 30081

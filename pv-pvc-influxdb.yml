@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-influxdb
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: 192.168.20.100
+    path: /volume1/k8s_volume/grafana/influxdb
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-influxdb
+  namespace: grafana
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: pv-influxdb
+
