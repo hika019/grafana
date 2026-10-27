@@ -3,12 +3,16 @@ kind: ServiceAccount
 metadata:
   name: influxdb-token-init
   namespace: grafana
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: influxdb-token-init
   namespace: grafana
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
@@ -23,6 +27,8 @@ kind: RoleBinding
 metadata:
   name: influxdb-token-init
   namespace: grafana
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 subjects:
   - kind: ServiceAccount
     name: influxdb-token-init
